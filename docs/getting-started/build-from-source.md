@@ -91,7 +91,7 @@ Utilities available from package managers `apt-get`, `dnf` and the like, such as
 exhaustive list) are assumed to be readily available infrastructure.
 
 The following two methods provide a CP2K-managed dependency stack. For a manually managed
-environment, use the CMake configuration described below.
+environment, use the [CMake configuration](#cmake-configuration-options) described at the end.
 
 ### Toolchain-based build
 
@@ -120,21 +120,49 @@ After that, to build and install CP2K linked against them, run:
 
 Everything is under the `CP2K_ROOT` directory mentioned above by default: the binaries and libraries
 of the dependencies are in `tools/toolchain/install/`, the CP2K build tree in `build/`, and the
-headers, modules, binary executables and a `cp2k_env` file in `install/`. (Before running CP2K, one
-must always source the `cp2k_env` file.) Options are also available to make installed dependencies
-and program outside of the source tree.
+headers, modules, binary executables and a `cp2k_env` file in `install/`. Options are also available
+to make installed dependencies and program outside of the source tree.
 
 ```shell
 ./install_cp2k_toolchain.sh --install-dir=/opt/cp2k/toolchain
 ./build_cp2k.sh --prefix /opt/cp2k
 ```
 
-```{note}
-The toolchain does not cover every optional dependency or feature combination, such as DLA-Future,
-PEXSI, and optional SIRIUS features including NLCG. If these features are needed, the Spack-based
-build as detailed below is the more recommended method. While the toolchain offers some support for
-GPU builds, it is more limited than the Spack-based method.
+Remember to always source the `cp2k_env` file before starting the program in the current shell and
+session. (This is easy to miss on a HPC server where one submits jobs from a login node to another
+computing node with job scripts!) For instance, if `CP2K_ROOT` is `/opt/cp2k`, the `--prefix` option
+of `build_cp2k.sh` is the default (i.e. `install`), then a quick look at the version information
+would use the commands below (as input to the command line prompt or as part of the job script).
+
+```shell
+source /opt/cp2k/install/cp2k_env
+cp2k.psmp -v
 ```
+
+The intended output is something like this, with the block of compiler options omitted for brevity.
+
+```text
+ CP2K version 2026.2
+ Source code revision git:c92cc08
+ cp2kflags: omp libint fftw3 libxc elpa parallel scalapack mpi_f08 cosma libxs spglib openblas libdftd4 s_dftd3 mctc-lib tblite libvori libbqb
+ compiler: GCC version 14.3.1 20251022 (Red Hat 14.3.1-4)
+ compiler target: cpuid   1002 (x86_avx2)
+ compiler options:
+   [...]
+```
+
+#### Pros and Cons
+
+The toolchain-based build is suitable for cases where only the (near-)minimal essential dependencies
+are desired. Its reliance and interference with external package managers and internet connection is
+also minimal, and as such it comes in more handy in an offline scenario.
+
+The toolchain does not cover every optional dependency or feature combination, such as DLA-Future,
+PEXSI, and optional SIRIUS features including NLCG. Its support for GPU-accelerated builds is also
+limited. If these features are needed, the Spack-based build as detailed in the next section is the
+more recommended method. In fact, due to difficulties in extending the toolchain for increasingly
+sophisticated configurations involving nested dependencies, it _may_ be slimmed down or retired in
+favor of the modern, well-maintained Spack workflow in the future.
 
 ### Spack-based build via `make_cp2k.sh`
 
@@ -176,8 +204,8 @@ Usage: make_cp2k.sh [-bd | --build_deps]
                     [-cc | --check_conventions]
                     [-cray]
                     [-cv | --cp2k_version (pdbg | psmp | sdbg | ssmp | ssmp-static)]
-                    [-df | --disable | --disable_feature (all | FEATURE | PACKAGE | none)
-                    [-ef | --enable | --enable_feature (all | FEATURE | PACKAGE | none)
+                    [-df | --disable | --disable_feature (all | FEATURE | PACKAGE | none)]
+                    [-ef | --enable | --enable_feature (all | FEATURE | PACKAGE | none)]
                     [-gm | -gpu  | --gpu_model (<CUDA SM code> | P100 | V100 | T400 | A100 | H100 | H200 | GH200 | B200 | none)]
                     [-gromacs GROMACS_VERSION]
                     [-gv | --gcc_version (10 | 11 | 12 | 13 | 14 | 15 | 16)]
@@ -263,16 +291,33 @@ Features: cray_pm_accel_energy | cusolver_mp | dbm_gpu | elpa_gpu | grid_gpu | p
 By default, compiled packages are also stored in a local cache. This significantly accelerates later
 dependency builds; see `--use_cache` for the available cache backends.
 
+```{note}
+The way Spack resolves a dependency stack is very different from that in a toolchain-based build;
+even with the same set of libraries intended to be freshly installed and linked to CP2K, the package
+download and disk usage can still make an overall difference.
+```
+
+The CP2K built with Spack can be started with the launcher script `install/bin/launch`. Suppose
+`CP2K_ROOT` is `/opt/cp2k`, then a version check goes as follows.
+
+```shell
+/opt/cp2k/install/bin/launch cp2k.psmp -v
+```
+
 #### Testing
 
-Add `-t` or `--test` followed by `TESTOPTS` to run a regression test after a successful build:
+To run a regression test immediately after a successful build, add `-t` or `--test` followed by test
+options surrounded by double quotes (`"TESTOPTS"`). The test options will be passed to the script
+`tests/do_regtest.py` as arguments.
 
 ```shell
 ./make_cp2k.sh --test "--maxtasks 16 --flagslow"
+# Alternatively: in case no options are needed, use an empty quote string
+./make_cp2k.sh --test ""
 ```
 
-Alternatively, run `install/bin/run_tests` after a successful build. The script prints usage
-examples at the end of a successful run.
+Alternatively, the script `install/bin/run_tests` produced after a successful build can be used to
+start a regression test later. The script prints usage examples at the end of a successful run.
 
 (build-gromacs-cp2k)=
 
@@ -297,8 +342,9 @@ example is given in the header of that
 
 ## CMake configuration options
 
-Detailed descriptions of most build options can be found in the technologies section together with
-description of available dependencies.
+Both toolchain and Spack utilize CMake configurations automatically for convenience after preparing
+the dependencies. Many of these options allow for CP2K to be built with support of a linked library;
+refer to the technologies section for details together with description of available dependencies.
 
 Here are some other important general options you may want to know:
 

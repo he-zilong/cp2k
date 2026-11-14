@@ -70,6 +70,7 @@
 - Low-spin ROKS energies and orbital derivatives with GAPW
   ([#6257](https://github.com/cp2k/cp2k/pull/6257))
 - Chargemol WFX export with OT ([#6276](https://github.com/cp2k/cp2k/pull/6276))
+- Unit conversion for initial velocities in MD ([#6548](https://github.com/cp2k/cp2k/pull/6548))
 - **TODO**
 
 ### New Libraries
@@ -90,6 +91,7 @@
 - Require an external libwignernj installation (version 0.8 or newer)
   ([#5961](https://github.com/cp2k/cp2k/pull/5961))
 - Require FFTW3 as hard dependency ([#6119](https://github.com/cp2k/cp2k/pull/6119))
+- Rename SUBSYS/VELOCITY/PINT_UNIT keyword to UNIT ([#6548](https://github.com/cp2k/cp2k/pull/6548))
 - **TODO**
 
 ### Fixes
